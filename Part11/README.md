@@ -826,3 +826,299 @@ const htmlTag = /<([^>]+)>/			// <后跟一个或多个非>字符再后跟>
 "Testing<br/>1,2,3".split(htmlTag)	// ["Testing", "br/", "1,2,3"]
 ```
 
+### RegExp类
+
+构造函数参数：
+
+1. 正则表达式主体，字符串字面量和正则都使用`\`字符转义，所有`\`字符都要替换成`\\`；也可以是一个`RegExp`对象，用于复制`RegExp`对象，可以修改它的标志。
+2. 标志。
+
+```js
+let zipcode = new RegExp("\\d{5}", "g");
+```
+
+#### RegExp属性
+
+- source：只读，包括正则表达式的源文本，即`RegExp`字面量的两个斜杠间的字符
+- flags：只读，包含指定`RegExp`标题的一个或多个字母
+- global：只读布尔，设置了`g`则为`true`
+- ignoreCase：只读布尔，设置了`i`则为`true`
+- multiline：只读布尔，设置了`m`则为`true`
+- dotAll：只读布尔，设置了`s`则为`true`
+- unicode：只读布尔，设置了`u`则为`true`
+- sticky：只读布尔，设置了`y`则为`true`
+- lastIndex：可读写整数，对于`g`或`y`，该属性用于指定下一次匹配的起始字符位置
+- test()：接受字符串参数，若字符串与模式匹配则返回`true`，否则`false`
+- exec()：接收一个字符串，从字符串寻找匹配，没找到返回`null`，找到则返回数组，与字符串的`match()`方法在非全局搜索时返回的数组一样。无论正则是否设置了`g`都会返回相同的数组。每次`exec`成功执行，找到一个匹配项，都会更新`RegExp`的`lastIndex`属性，将其改写为匹配文本之后第一个字符的索引。若没找的则`lastIndex`重置为`0`。
+
+```js
+let pattern = /Java/g;
+let text = "JavaScript > Java";
+let match;
+while((match = pattern.exec(text)) !== null) {
+    console.log(`Matched ${match[0]} at ${match.index}`);
+    console.log(`Next search begins at ${pattern.lastIndex}`);
+}
+```
+
+## 日期与时间
+
+默认返回表示当前日期和时间的`Date`对象：
+
+```js
+let now = new Date();
+```
+
+传入数值会将其解释为从`1970`年至今经过的毫秒数：
+
+```js
+let epoch = new Date(0);		// 格林尼治标准时间 1970年1月1日0时
+```
+
+若传入一个或多个整数参数，会解释为本地时区的年、月、日、时、分、秒和毫秒：
+
+```js
+let century = new Date(
+    2100, 				// 2100年
+    0, 					// 1月
+    1,					// 1日
+    2, 3, 4, 5);		// 本地时间02:03:04.005
+```
+
+若省略时间字段，则默认为`0`，时间为半夜`12`点。
+
+使用多参数调用时，构造函数会使用本地计算机的时区解释它们。
+
+`Date.UTC()`：以UTC[^1]指定日期时间，接收与`Date()`相同的参数，但使用UTC解释，并返回毫秒时间戳，可以再传给`Date()`的构造函数。
+
+```js
+// 英格兰2100年1月1日半夜12点
+let century = new Date(Date.UTC(2100, 0, 1));
+```
+
+直接打印`console.log(century)`会以本地时区打印，若想以UTC显示，应该先用`toUTCString()`或`toISOString()`转换它。
+
+`Date()`如果传入的是字符串，会尝试按照日期和时间格式解析。可以解析`toString()`、`toUTCString()`、`toISOString()`方法产生的格式：
+
+```js
+let century = new Date("2100-01-01T00:00:00Z");		// ISO格式的日期
+```
+
+获取或设置`Date`对象的年份：`getFullYear()`、`getUTCFullYear()`、`setFullYear()`、`setUTCFullYear()`：
+
+```js
+let d = new Date();						// 当前年
+d.setFullYear(d.getFullYear() + 1);		// 当前年加1年
+```
+
+获取或设置其他的字段，只要把`FullYear`改成`Month`、`Date`、`Hours`、`Minutes`、`Seconds`、`Milliseconds`。
+
+某些日期设置方法允许设置多个字段：
+
+- `setFullYear()`和`setUTCFullYear()`可选地允许同时设置月和日
+- `setHours()`和`setUTCHours()`除了支持小时，海口指定分钟、秒、毫秒
+
+查询日的方法是`getDate()`和`getUTCDate()`。`getDay()`和`getUTCDay()`返回的是代表周几的数值。周几是只读的，没有对应的`set`方法。
+
+### 时间戳
+
+JS内部将日期表示为整数，从1970年1月1日0点起的毫秒数。最大支持8 640 000 000 000 000，所以JS表示的时间不会超过27万年。
+
+`Date`对象的`getTime()`方法返回该值，`setTime()`设置该值。
+
+给`Date`对象添加`30`秒：
+
+```js
+d.setTime(d.getTime)
+```
+
+毫米值又称时间戳(timestamp)，静态的`Date.now()`方法返回当前时间的时间戳：
+
+```js
+let st = Date.now()
+// 执行耗时操作
+let et = Date.now();
+console.log(`Spline reticulation took ${et - st}ms.`);
+```
+
+有时需要更高精度显示经历的时间，可以用`performance.now()`，返回的值包含毫秒后的小数部分。它返回的值是相对于网页加载完成后或Node进程启动后经过的时间。
+
+`performance`对象是W3C定义的Performance API的一部分。要在Node中使用`performance`对象，必须先导入：
+
+```js
+const { performance } = require("perf_hooks");
+```
+
+高精度计时可能让一些没有底线的网站用于采集访客指纹，所以浏览器默认可能降低`performance.now()`的精度。
+
+作为Web开发者，应该可以通过某种方式更新启用高精度计时。
+
+### 日期计算
+
+`Date`对象可以用JS标准的`<`、`<=`、`>`、`>=`等比较操作符进行比较。
+
+日期设置方法在数值溢出的情况下也能正常工作，例如在`setMonth`中将当前月增加了超过`11`个月时，会自动增加年份，对超过天数的情况会添加月份。
+
+### 格式化与解析日期字符串
+
+##### toString()
+
+使用本地时区但不按照当地惯例格式化日期和时间
+
+##### toUTCString()
+
+使用UTC时区但不按照当地惯例格式化日期和时间
+
+##### toISOString()
+
+以标准的ISO-8601[^2]格式打印日期和时间。字母"T"在输出中分隔日期部分和时间部分。时间以UTC表示，可以通过输出末尾的字母"Z"看出来
+
+##### toLocaleString()
+
+使用本地时区及用户当地管理一致的格式
+
+##### toDateString()
+
+仅格式化`Date`日期部分，忽略时间部分。使用本地时区，不与当地惯例适配
+
+##### toLocaleDateString()
+
+仅格式化日期部分，使用本地时区，适配当地惯例
+
+##### toTimeString()
+
+仅格式化时间部分，使用本地时区，不适配当地惯例
+
+##### toLocaleTimeString()
+
+仅格式化时间部分，使用本地时区，适配当地惯例
+
+`Date.parse()`，接受字符串参数，尝试将其作为日期和时间解析，返回一个表示该日期的时间戳。
+
+[^1]:Universal Coordinated Time，通用协调时间；又称GMT，Greenwich Mean Time，格林尼治标准时间
+[^2]:年-月-日时:分:秒:毫秒
+
+## Error类
+
+`throw`抛出，`catch`捕获。
+
+惯例将`Error`类或其子类的实例作为`throw`抛出的错误。
+
+创建`Error`对象时，该对象能够捕获JS的栈状态，若异常为被捕获，则显示包含错误消息的栈跟踪信息。
+
+`Error`对象的属性和方法：
+
+- `message`：传给`Error()`构造函数的值，必要时转为字符串
+- `name`：对使用`Error()`创建的错误对象，始终是`"Error"`
+- `toString()`：返回字符串，为`name: message`
+
+ECMAScript标准没有定义，但Node和所有现代浏览器都在`Error`对象上定义了`stack`属性，值为多行字符串，包含创建错误对象时JS调用栈的栈跟踪信息。捕获到异常错误时，可以将该属性的信息作为日志收集起来。
+
+JS还有些其它子类，以便触发ECMAScript定义的一些特殊类型和错误：
+
+- `EvalError`
+- `RangeError`
+- `ReferenceError`
+- `SyntaxError`
+- `TypeError`
+- `URIError`
+
+这些子类也有构造函数接收一个消息参数，与基类`Error`一样。
+
+可以自定义`Error`子类，以便更好封装自己程序的错误信息。
+
+```js
+class HTTPError extends Error {
+    constructor(status, statusText, url) {
+        super(`${staus} ${statusText}: ${url}`);
+        this.status = status;
+        this.statusText = statusText;
+        this.url = url;
+    }
+    get name() { return "HTTPError"; }
+}
+
+let error = new HTTPError(404, "Not Found", "http://www.example.com/");
+error.status			// 404
+error.message			// "404 Not Found: http://www.example.com/"
+error.name				// "HTTPError"
+```
+
+## JSON序列化与解析
+
+程序保存数据或通过网络连接向另一个程序传输数据时，必须将内存中的数据结构转为字节或者字符的序列，才可以保存或传输。且之后再被解析或恢复为原来内存中的数据结构。该数据结构转换为字节或字符流的方式称为序列化(serialization)，也被称为编排(marshaling)或制备(pickling)。
+
+JS中序列化数据的最简单方式是使用一种称为JSON的序列化格式。JSON是"JavaScript Object Notation"(JavaScript对象表示法)的简写形式。
+
+- `JSON.stringify()`：序列化
+- `JSON.parse()`：反序列化
+
+若在JSON字符串前加上`var data = `，并将结果传给`eval()`，就可以把原始数据结构的一个副本赋值给变量`data`。不要这么做，这是个巨大的安全漏洞。若攻击者可以向JSON文件注入任意JS代码，那就可以让我们的程序运行他们的代码。
+
+JSON是JS的子集，不允许有注释，属性名也必须包含在双引号里。
+
+若希望JSON格式对人类友好，可以在第二个参数传`null`，第三个参数传一个数值或字符串。`JSON.stringify()`第三个参数告诉它应该把数据格式化为多行缩进格式。若第三个是数值，则该数值表示每级缩进的空格数，若是空白符(如`\t`)字符串，则使用该字符串：
+
+```js
+let o = {s: "test", n: 0};
+JSON.stringify(o, null, 2);		/* 
+'{\n 
+ "s": "test",\n
+ "n": 0\n
+ }'
+```
+
+`JSON.parse()`忽略空白符。
+
+### JSON自定义
+
+若在序列化时碰到了JSON格式原生不支持的值，会查找该值是否有`toJSON()`方法。若有则调用，然后将其返回值字符串化。
+
+`Date`对象实现了`toJSON()`方法，返回与`toISOString()`方法相同的值。意味着若给序列化对象包含`Date`，那么该`Date`会自动转为字符串，且在解析序列化后的字符串时，重新创建的数据结构不会与开始时相同了，因为原来的`Date`变成了字符串。
+
+若想重新创建该`Date`对象，可以给`JSON.parse()`的第二个参数传递"复活"(reiver)函数。该函数会在解析输入字符串中的每个原始值时被调用(但解析包含这些原始值的对象和数组时不会调用)，该函数会作为包含这些原始值的对象或数组的方法调用，所以可以在其中通过`this`关键字引用包含对象。
+
+调用复活函数会传给它：
+
+1. 属性名(可能是对象属性名，也可能是转换为字符串的数组索引)
+2. 该对象属性或数组元素对应的原始值
+
+复活函数的返回值会变成命名属性的新值。若复活函数返回第二个参数，则属性不变，若返回`undefined`，则相应的命名属性会从对象或数组中删除，即`JSON.parse()`返回给用户的对象中将不包含该属性。
+
+```js
+let data = JSON.parse(text, function(key, value){
+    // 删除以下划线开头的属性和值
+    if(key[0] === "_") return undefined;
+    // 若值为ISO 8601格式的日期字符串 则转换为Date
+    if (typeof value === "string" && /^\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d.\d\d\dZ$/.test(value)) {
+        return new Date(value);
+    }
+    // 否则返回原始值
+    return value;
+});
+```
+
+`JSON.stringify()`的第二个参数也可以传数组或函数来自定义其输出字符串：
+
+数组：若是字符串数组(数值数组会被转为字符串)，那么这些字符串会被当作对象属性(或数组元素)的名字。名字不在该数组之中的属性会被字符串化过程忽略。
+
+```js
+// 指定要序列化的字段 以及序列化他们的顺序
+let text = JSON.stringify(address, ["city", "state", "country"]);
+```
+
+函数：替代函数，第一个参数是对象属性名或值在对象中的数组索引，第二个参数是值本身。返回值会替换原始值，若返回`undefined`或什么也不返回，则该值在字符串化过程中被忽略。
+
+```js
+// 指定替代函数 忽略值为RegExp的属性
+let json = JSON.stringify(o, (k, v) => v instanceof RegExp ? undefined : v);
+```
+
+## 国际化API
+
+JS国际化API包括3个类：
+
+1. `Intl.NumberFormat`
+2. `Intl.DateTimeFormat`
+3. `Intl.Collator`
+
