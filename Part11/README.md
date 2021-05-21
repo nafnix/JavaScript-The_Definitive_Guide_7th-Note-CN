@@ -1122,3 +1122,295 @@ JS国际化API包括3个类：
 2. `Intl.DateTimeFormat`
 3. `Intl.Collator`
 
+这三个类允许我们以适合当地的方式格式化数值(含货币数量和百分数)、日期和时间，以及以适合当地的方式比较字符串。
+
+这些类非ECMAScript定义，而是ECMA402定义
+
+### 格式化数值
+
+世界各地的用户对数值格式的预期是不同的，小数点可能是逗号也有可能是句号。
+
+`Intl.NumberFormat`类定义了一个`format()`方法。该构造函数接收两个参数：
+
+1. 指定作为数值格式化依据的地区
+
+   - 若省略或传入`undefined`，则使用系统设置中的地区
+   - 若是字符串则是期望地区
+   - 若是地区字符串数组，则会自动选择支持最好的一个
+
+2. 指定格式化细节的对象，且该对象应该包含一个或多个下列属性：
+
+   - `style`：指定必须的数值格式类型。默认`"decimal"`，若指定`"percent"`则按百分比格式化数值，指定`"curreny"`则表示数值为货币数量
+   - `currency`：若`style`为`"curreny"`，则该值必须，用于指定3个字母的ISO货币代码(如"USD"表示美元)
+   - `currencyDisplay`：若`style`的值为`currency`，则该属性指定如何显示货币值：
+     - 默认为`symbol`：若货币有符号则使用货币符号
+     - `code`：使用3个字母的ISO代码
+     - `name`：完整形式拼出货币名
+   - `useGrouping`：若不想让数值有千分位分隔符(或其他地区相关的格式)，将该属性设为`false`
+   - `minimumIntegerDigits`：数值最少显示几位整数。若数值位数小于该值，则左侧填`0`，默认为`1`，最高`21`
+   - `minimumFractionDigits`、`maximumFractionDigits`：控制数值小数部分的格式。数值小数位数小于最小值，则右侧填`0`。若大于最小值，则小数部分会被舍入。取值范围`0`到`20`。默认最小值为`0`，最大值为`3`，但格式化货币数量时是例外，此时小数部分的长度根据指定的货币会有所不同。
+   - `minimumSignificantDigits`、`maximumSignificantDigits`：控制数值中有效位的数量，例如让它们适合格式化科学数据。若指定，则两个属性会覆盖前面列出的整数和小数属性。合法取值范围`1`到`21`
+
+```js
+let euros = Intl.NumberFormat("es", {style: "currency", currency: "EUR"});
+euros.format(10)			// "10,00 €": 10欧元 西班牙惯例
+
+let pounds = Intl.NumberFormat("en", {style: "currency", currency: "GBP"});
+pounds.format(1000)			// "1,000,00": 1000镑 英国格式
+```
+
+可以直接把`format()`方法赋给一个变量，然后想使用独立函数一样使用它：
+
+```
+let data = [0.05, .75, 1];
+let formatData = Intl.NumberFormat("en", {style: "currency", currency: "GBP"}).format
+
+data.map(formatData)
+```
+
+### 格式化日期和时间
+
+`Intl.DateTimeFormat`类似`Intl.NumberFormat`，接收相同的参数。
+
+第二个参数对象属性：
+
+- `year`：年
+  - `numeric`表示完整的4位数年份
+  - `2-digit`表示两位数简写
+- `month`：月
+  - `numeric`表示可能比较短的数字，"1"
+  - `2-digit`表示始终使用2位数字，"01"
+  - `long`表示全名，"January"
+  - `short`表示简称，"Jan"
+  - `narrow`表示高度简写，"J"，不保证唯一
+- `day`：日
+  - `"numeric"`表示1位或者2位数字
+  - `2-digit`表示2位数字
+- `weekday`：周
+  - `long`：全名
+  - `short`：简称
+  - `narrow`：高度简写
+- `era`：纪元，如CE或BCE，在格式化很久前的日期或使用日文日历时有用
+  - `long`
+  - `short`
+  - `narrow`
+- `hour`、`minute`、`second`：
+  - `numeric`：1位或2位数字
+  - `2-digit`：强制1位数值在左侧补0
+- `timeZone`：格式化日期时使用的时区，若省略则用本地时区。实现可能以UTC为准，也有可能以IANA时区为准
+- `timeZoneName`：格式化日期和时间时如何显示时区
+  - `long`：时区全称
+  - `short`：简写或数值形式
+- `hour12`：布尔值，是否使用12小时制，默认取决于地区设置
+- `hourCycle`：指定半夜12点是显示0点、12点还是24点。默认取决于地区设备。`hour12`优先于该属性。
+
+```js
+let d = new Date("2020-01-02T13:14:15Z");
+
+Intl.DateTimeFormat("en-US").format(d)		// "1/2/2020"
+Intl.DateTimeFormat("fr-FR").format(d)		// "02/01/2020"
+
+let opts = { weekday: "long", month: "long", year: "numeric", day: "numeric"};
+Intl.DateTimeFormat("en-US", opts).format(d)	// "Thursday, January 2, 2020"
+
+opts = {timeZone: "America/New_York"};
+Intl.DateTimeFormat("fr-FR", opts).format(d)	// "02/01/2020"
+```
+
+### 比较字符串
+
+想适合当地的字符串排序可以用`Intl.Collator`对象，将该对象的`compare()`方法传给`sort()`方法，以执行适合当地的字符串排序。
+
+它的第一个参数与格式化数值和格式化日期和时间的一样，第二个也是对象，但属性不同：
+
+- `usage`：指定如何使用整理器对象，默认`sort`，可以指定为`search`，亦在让整理器区分更多的字符串以产生可靠的排序。
+- `sensitivity`：指定整理器在比较字符串时是否区分字母大小写和重音。当`usage`为`sort`时默认为`variant`，若是`search`时则取决于地区
+  - `base`：比较时忽略大小写和重音，只考虑每个字符的基本字母
+  - `accent`：比较时考虑重音但忽略大小写
+  - `case`：考虑大小但忽略重音
+  - `variant`：执行严格比较，区分大小写和重音
+- `ignorePunctuation`：属性设置为`true`以便在比较时忽略空格和标点符号。
+- `numeric`：若为`true`，则表示希望按照数值顺序而非字母顺序排序。
+- `caseFirst`：同字母的优先顺序。默认看地区。
+  - `upper`：大写在前
+  - `lower`：小写在前
+
+`compare()`方法接受两个字符串参数，返回小于(第一个字符串位于第二个之前)、等于(两者相同)或大于(第二个位于第一个之前)`0`的数值，与`Array`的`sort()`方法期待的可选参数和返回值特点一致。
+
+`Intl.Collator`也会自动把`compare()`绑定到它的实例，所以可以直接把这个方法传给`sort()`。
+
+```js
+// 按照用户地区排序的简单整理器
+const collator = new Intl.Collator().compare;
+["a", "z", "A", "Z"].sort(collator);		// ["a", "A", "z", "Z"]
+
+// 文件名经常包含数值 因此需要进行特殊排序
+const filenameOrder = new Intl.Collator(undefined, { numeric: true }).compare;
+['page10', 'page9'].sort(filenameOrder)		// ['page9', 'page10']
+```
+
+## 控制台API
+
+除了`console.log()`外，控制台API还定义了其它几个非常有用的函数，该API非ECMAScript标准。
+
+- `console.log()`：最常用的控制台函数。将参数转换为字符串输出到控制台。
+- `console.debug()`、`console.info()`、`console.warn()`、`console.error()`：类似`log`。Node中`error`将其输出到标准错误流而非标准输出流。此外的都是`console.log()`的别名。
+- `console.assert()`：若第一个参数是真值，则什么也不做，若是假值则剩余参数北川给`console.error()`一样打印出来，且前面带个"Assertion failed"前缀。
+- `console.clear()`：在可能的情况下清空控制台。
+- `console.table()`：生成表列数据输出。
+- `console.trace()`：像`console.log`一样打印参数，输出后会继续打印栈跟踪信息。Node中，该输出进入标准错误而非标准输出。
+- `console.count()`：接收一个字符串参数，并打印该字符串，后跟已经通过该字符串调用的次数。调试事件处理程序时，若需要知道事件处理程序被触发次数可以用该函数。
+- `console.countReset()`：接收一个字符串参数，并重置针对该字符串的计数器。
+- `console.group()`：将其参数传给`console.log()`一样打印到控制台，然后设置控制台内部状态，让后续的控制台消息相对刚刚的消息缩进。
+- `console.groupCollapsed()`，类似`group()`，但分组会被默认折叠。Node中与`group`一样。
+- `console.groupEnd()`：无参数也无输出，用于结束当前所在`group`。
+- `console.time()`：接收一个字符串参数，并记录该字符串调用自身时的时间，无输出。
+- `console.timeLog()`：接收一个字符串参数。若该字符串前面传给`console.time()`过，则会打印字符串及自上次调用`console.time()`之后经过的时间。若还有额外参数，则会像被传给`console.log()`一样被打印出来。
+- `console.timeEnd()`：接收一个字符串参数，若该参数前面传给`console.time()`过，则打印该参数及经过实践。调用`console.timeEnd()`后，若不在调用`console.time()`，则调用`console.timeLog()`是不合法。
+
+### 通过控制台格式化输出
+
+像`console.log()`这样打印自己参数的控制台函数都有该特性：若第一个参数是包含下述字符串的字符串，则该参数被当成格式字符串，后续参数的值会被带入该字符串，以取代这两个字符的`%`序列：
+
+- `%s`：该参数转为字符串
+- `%i`和`%d`：该参数被转为数值，然后截断为整数
+- `%f`：该参数被转为数值
+- `%o`和`%O`：该参数被转为对象，对象的属性名和值会显示出来。显示对象细节。
+- `%c`：浏览器中该参数被解释为CSS样式字符串，用于给后面的文本添加样式。Node中会被忽略。
+
+```js
+console.log("%s哈哈哈哈", "讲个笑话")
+```
+
+## URL API
+
+URL API非ECMAScript定义，但Node和除IE外的所有浏览器都定义了它。该类是在WHATWG中标准化的。
+
+```js
+let url = new URL("https://example.com:8000/path/name?q=term#fragment");
+url.href			// "https://example.com:8000/path/name?q=term#fragment"
+url.origin			// "https://example.com:8000"
+url.protocol		// "https:"
+url.host			// "example.com:8000"
+url.hostname		// "example.com"
+url.port			// "8000"
+url.pathname		// "/path/name"
+url.search			// "?q=term"
+url.hash			// "#fragment"
+```
+
+URL可以包含用户名或者用户和密码：
+
+```js
+let url = new URL("ftp://admin:1337!@ftp.example.com/");
+url.href			// "ftp://admin:1337!@ftp.example.com/"
+url.origin			// "ftp://ftp.example.com"
+url.username		// "admin"
+url.password		// "1337!"
+```
+
+此处的`origin`就是URL协议和主机的组合，是只读属性。但其它属性是可读写属性：
+
+```js
+let url = new URL("https://example.com");
+url.pathname = "api/search";		// 添加路径
+url.search = "q=test";				// 添加查询参数
+url.toString()						// "https://example.com/api/search?q=test"
+```
+
+URL类会在需要时正确地在URL中添加标点符号及转义特殊字符：
+
+```js
+let url = new URL("https://example.com");
+url.pathname = "path with spaces";
+url.search = "q=foo#bar";
+url.pathname			// "/path%20with%20spaces"
+url.search				// "?q=foo%23bar"
+url.href				// "https://example.com/path%20with%20spaces?q=foo%23bar"
+```
+
+如果把`href`设置为一个新字符串会返回字符串的URL解析器，就像再次调用了`URL()`构造函数一样。
+
+`search`属性可读写，可以通过它获取或设置URL的查询部分。
+
+`searchParams`属性则是一个对`URLSearchParams`对象的只读引用，而`URLSearchParams`对象具有获取、设置、添加、删除和排序参数的API：
+
+```js
+let url = new URL("https://example.com/search");
+url.search									// ""
+url.searchParams.append("q", "term")		// 添加一个搜索参数
+url.search									// "?q=term"
+url.searchParams.set("q", "x")				// 修改
+url.search									// "?q=x"
+url.searchParams.get("q")					// "x"
+url.searchParams.has("q")					// true
+url.searchParams.has("p")					// false
+url.searchParams.append("opts", "1")
+url.search									// "?q=x&opts=1"
+url.searchParams.append("opts", "&")		// 相同参数再添加一个值
+url.search									// "?q=x&opts=1&opts=%26"
+url.searchParams.get("opts")				// "1"	第一个值
+url.searchParams.getAll("opts")				// ["1", "&"]
+url.searchParams.sort()						// 参数排序
+url.search									// "?opts=1&opts=%26&q=x"
+url.searchParams.set("opts", "y")			// 修改opts参数
+
+// searchParams是可迭代对象
+[...url.searchParams]						// [["opts", "y"], ["q", "x"]]
+url.searchParams.delete("opts");			// 删除opts参数
+url.search									// "?q=x"
+url.href									// "http://example.com/search?q=x"
+```
+
+若想把URL参数编码为查询字符串，可以创建`URLSearchParams`对象，追加参数，再将它转为字符串并将其赋给URL的`search`属性：
+
+```js
+let url = new URL("http://example.com");
+let params = new URLSearchParams();
+params.append("q", "term");
+params.append("opts", "exact");
+params.toString()					// "q=term&opts=exact"
+url.search = params;
+url.href							// "http://example.com/?q=term&opts=exact"
+```
+
+### 遗留URL函数
+
+不应该再使用`escape()`和`unescape()`，这两个已被废弃。废弃它们的同时，ECMAScript增加了两对替代性的全局函数：
+
+1. `encodeURI()`和`decodeURI()`
+   - `encodeURI()`接收一个字符串参数，返回一个新字符串，新字符串中非ASCII字符及某些ASCII字符会被转义。
+   - `decodeURI()`与`encodeURI()`相反。需要转义的字符首先被转为它们的UTF8编码，再将该编码的每个字节替换为`%xx`转义序列，其中`xx`是两个十六进制数字。由于`encodeURI`是编码整个URL，所以不会转义URL分隔符(`/ ? #`)。这也意味它不能正确处理包含URL分隔符的URL。
+2. `encodeURIComponent()`和`decodeURIComponent()`，类似上面的，不过它们专门用于转义URL的单个组件，所以它们也会转义用于URL组件。这两个是最有用的遗留URL函数。`encodeURIComponent`会转义路径名中的`/`字符，这可能非我想要。且它也会把查询参数中的空格转为`%20`，实际上查询参数中的空格应该是`+`。
+
+如果想正确地格式化和编码URL，最好还是用URL类。
+
+## 计时器
+
+使用`setTimeout()`和`setInterval()`可以让浏览器再指定的时间过后调用一个函数，或经过一定时间就重复调用某函数。
+
+`setTimeout()`参数：
+
+1. 函数
+2. 数值：表示经过多少毫秒后调用第一个函数，省略则为0。这意味着该函数会被注册到某个地方，将被"尽可能快地"调用。如果浏览器由于处理用户输入或其他事件而没有空闲，那么调用该函数的时机可能在10毫秒或更长时间以后。
+
+```js
+setTimeout(() => { console.log("Ready..."); }, 1000)		// 1秒后
+setTimeout(() => { console.log("set..."); }, 2000)			// 2秒后
+setTimeout(() => { console.log("go!"); }, 3000)				// 3秒后
+```
+
+`setTimeout`会立即运行并返回，只是未到1000毫秒时什么都不会发生，不会等到指定时间之后再返回。
+
+`setTimeout()`注册的函数只会被调用一次。有时该函数本身会在调用`setTimeout()`，但若想重复调用该函数，更好是用`setInterval()`，它们接受的参数都相同，但后者会导致每隔指定时间就调用一次指定函数。
+
+它们都返回一个值。若将该值存于变量中，之后可以把它传给`clearTimeout()`或`clearinteral()`以取消对函数的调用。
+
+```js
+// 每隔1秒 清空控制台并打印当前时间
+let clock = setInterval(() => {console.clear();console.log(new Date().toLocaleTimeString());}, 1000);
+
+// 10秒后 停止重复上述代码
+setTimeout(() => { clearInterval(clock);})
+```
+
