@@ -591,3 +591,361 @@ document.addEventListener("busy", (e) => {
 ```
 
 ## 操作DOM
+
+#### 通过CSS选择符选择元素
+
+`querySelector()`：
+
+- 参数：CSS选择符字符串
+- 返回：文档中找到的第一个匹配的元素，没找到就返回`null`
+
+```js
+// 查找文档里所有HTML标签包含属性id="spinner"的元素
+let spinner = document.querySelector("#spinner");
+```
+
+`querySelectorAll()`类似，但返回类似数组的`NodeList`对象，其中包含所有匹配的元素，该对象有个`length`属性，可以像数组一样通过索引访问，也是可迭代对象。
+
+```js
+// 查找所有<h1>、<h2>、<h3>标签的Element对象
+let titles = document.querySelectorAll("h1, h2, h3");
+```
+
+在元素上调用时，这两个方法只返回该元素后代中的元素。
+
+`closest()`：
+
+- 参数：CSS选择符
+- 返回：
+  - 若选择符匹配那个调用它的元素，则返回该元素
+  - 否则返回与选择符匹配的最近祖先元素
+  - 如果没有匹配则返回`null`
+
+让事件处理程序查找最近的超链接：
+
+```js
+// 查找有href属性的最近的外围<a>标签
+let hyperlink = event.target.closest("a[href]");
+```
+
+另一个例子：
+
+```js
+// 若e被包含在一个HTML列表元素里就返回true
+function insideList(e) {
+    return e.closest("ul,ol,dl") !== null;
+}
+```
+
+`matches()`可以检查元素是否与选择符匹配，如果匹配就返回`true`，否则`false`：
+
+```js
+// 若e是个HTML标题元素则返回true
+function inHeading(e) {
+    return e.matches("h1,h2,h3,h4,h5,h6");
+}
+```
+
+#### 其他选择元素的方法
+
+一些老式的元素选择方法。
+
+```js
+// 通过id查找
+let sect1 = document.getElementById("sect1");
+
+// 查找具有name="color"属性的所有元素 类似document.querySelector('*[name="color"]')
+let colors = document.getElementsByName("color");
+
+// 查找文档中所有的<h1>元素
+let headings = document.getElementsByTagName("h1");
+
+// getElementsByTagName()在Element对象上也有定义 取得sect1的后代里的所有<h2>元素
+let subheads = sect1.getElementsByTagName("h2");
+
+// 查找所有类名里包含"tooltip"的元素
+let tooltips = document.getElementByClassName("tooltip");
+
+// 查找sect1的后代里所有类名包含"sidebar"的元素
+let sidebars = sect1.getElementsByClassName("sidebar");
+```
+
+它们也返回`NodeList`，除了`getElementById()`返回`Element`对象。但它们的`NodeList`的`length`属性和其中的元素会随着文档内容或结构的变化而变化。
+
+#### 预选择的元素
+
+历史原因，`Document`类定义了一些快捷属性，可以通过它们直接访问某种节点。
+
+`images`、`forms`和`links`属性可以直接访问文档里的`<img>`、`<form>`、`<a>`元素。
+
+这些属性引用的时`HTMLCollection`对象，与`NodeList`对象非常类似，但还可以用元素ID或名字来索引其中的元素。
+
+```js
+document.forms.address;
+```
+
+还有`document.all`，该属性引用的对象类似`HTMLCollection`。
+
+### 文档结构与遍历
+
+`parentNode`：该属性引用元素的父节点，即另一个`Element`对象或`Document`对象。
+
+`chlidren`：该属性是`NodeList`，含元素的所有子元素，不含`Element`节点，如`Text`节点。
+
+`childElementCount`：该属性是元素所有子元素的个数。
+
+`firstElementChild`、`lastElementChild`：分别引用元素的第一个子元素和最后一个子元素。如果没有子元素，它们的值为`null`。
+
+`previousElementSibling`、`nextElementSibling`：元素左侧紧邻同辈元素和右侧紧邻同辈元素，若没有则为`null`。
+
+```js
+// 引用Document第一个子元素的的第二个元素
+document.children[0].children[1]
+document.firstElementChild.firstElementChild.nextElementSibling
+```
+
+标准HTML中，这两个表达式引用的都是文档的`<body>`标签。
+
+下面两个函数对文档执行深度优先的遍历，并对文档的每个元素都调用一次指定的函数：
+
+```js
+// 递归遍历Document或Element e
+// 在e和每个后代元素上调用函数f
+function traverse(e, f){
+    f(e);								// 在e上调用f()
+    for(let child of e.children){		// 迭代所有孩子
+        traverse(child, f);				// 每个孩子递归
+    }
+}
+
+function traverse2(e, f){
+    f(e);								// e上调用f()
+    let child = e.firstElementChild;	// 链表式迭代孩子
+    while(child !== null) {
+        traverse2(child, f);			// 并在这里递归
+        child = child.nextElementSibling;
+    }
+}
+```
+
+#### 作为节点树的文档
+
+所有`Node`对象都定义了以下属性：
+
+`parentNode`：当前节点的父节点，没有父节点或`Document`对象则为`null`。
+
+`childNodes`：只读的`NodeList`对象，包含节点的所有子节点(不只包含`Element`子节点)。
+
+`firstChild`、`lastChild`：当前节点的第一个子节点和最后一个子节点，如果没有子节点则为`null`。
+
+`previousSibling`、`nextSibling`：当前节点的前一个同辈节点和后一个同辈节点。这两个属性通过双向链接连接节点。
+
+`nodeType`：表示当前节点类型的数值：
+
+- `Document`：9
+- `Element`：1
+- `Text`：3
+- `Comment`：8
+
+`nodeValue`：`Text`或`Comment`节点的文本内容
+
+`nodeName`：`Element`节点的HTML标签名，会转为全部大写
+
+引用`Document`第一个子节点的第二个子节点：
+
+```js
+document.childNodes[0].childNodes[1]
+document.firstChild.firstChild.nextSibling
+```
+
+对应HTML：
+
+```html
+<html>
+    <head>
+        <title>Test</title>
+    </head>
+    <body>
+        Hello World!
+    </body>
+</html>
+```
+
+第一个子节点的第二个子节点为`<body>`元素，`nodeType`为`1`，`nodeName`为`"BODY"`。
+
+返回元素或文档中所有文本的函数：
+
+```js
+// 返回元素e的纯文本内容 递归包含子元素
+// 该方法类似元素的textContent属性
+function textContent(e) {
+    let s = "";								// 累积文本
+    for(let child = e.firstChild; child !== null; child = child.nextSibling) {
+        let type = child.nodeType;
+        if (type === 3){					// 若是Text节点
+            s += child.nodeValue;			// 将文本内容追加到字符串
+        } else if (type === 1) { 			// 若是Element节点
+            s += textContent(child);		// 则递归
+        }
+    }
+}
+```
+
+### 属性
+
+`Element`类定义了`getAttribute()`、`setAttribute()`、`hasAttribute()`、`removeAttribute()`方法，用于查询、设置、检查、删除元素的属性。
+
+#### 作为元素属性的HTML属性
+
+表示HTML文档中元素的`Element`类通常会定义读/写属性。
+
+`HTMLElement`为通用HTML属性和事件处理程序属性定义了属性。特定的`Element`子类型则定义了特定于相应元素的属性。
+
+```js
+// 修改img元素的src
+let image = document.querySelector("#main_image");
+let url = image.src;								// src属性为图片的URL
+image.id === "main_image"							// true
+```
+
+有些元素的HTML属性名会映射到不同的JS属性。如`<input>`在HTML的`value`属性是由JS的`defaultValue`属性镜像的。JS的`value`属性包含用户当前在`<input>`元素里输入的值。但修改`value`属性，不会影响JS的`defaultValue`属性，也不会影响HTML的`value`属性。
+
+HTML属性不区分大小写，但JS属性名区分大小写。将HTML属性转为JS属性，只要全部小写就行。如果HTML属性包含多个单词，那就从第二个单词开始，每个单词的首字母都大写。但事件处理程序属性除外。
+
+有些HTML属性名和JS的保留字冲突，这些属性的对应规则通常是多出前缀"html"：`<lable>`在HTML里的`for`变成JS里的`htmlFor`属性。对于`class`因为转为JS也和`HTMLclass`冲突，所以实际是`className`。
+
+JS中表示HTML属性的属性通常都是字符串值。但HTML属性是布尔值或数字值时，相应的JS属性则是布尔值或数值，不是字符串。事件处理程序属性的值则始终为函数或`null`。
+
+该方式只能获取和设置HTML里的对应的属性值，不能删除，删除用`removeAttribute()`。
+
+#### class属性
+
+HTML中的`class`属性值是空格分隔的CSS类名列表。
+
+`className`属性可用于设置或返回HTML中`class`属性的字符串值。
+
+`Element`对象定义了`classList`属性，支持将`class`属性作为一个列表来操作，其值为一个可迭代的类数组对象。定义了`add()`、`remove()`、`contains()`、`toggle()`方法。
+
+```js
+// 让用户知道此刻在忙 显示个转轮图标 删除hidden类 添加animated类
+let spinner = document.querySelector("#spinner");
+spinner.classList.remove("hidden");
+spinner.classList.add("animated");
+```
+
+#### dataset属性
+
+有时在HTML元素上附加一些信息可以帮助JS代码选择操作这些元素。
+
+DOM里，`Element`对象的`dataset`属性引用的对象包含与HTML中的`data-`属性对应的属性，但不带该前缀。
+
+即`dataset.x`保存HTML中`data-x`属性的值。连字符分隔的属性映射为驼峰式属性名：HTML的`data-section-number`转为JS的`dataset.sectionNumber`。
+
+HTML：
+
+```html
+<h2 id="title" data-section-number="16.1">
+    Attribute
+</h2>
+```
+
+可以用以下JS访问其中的节号：
+
+```js
+let number = document.querySelector("#title").dataset.sectionNumber;
+```
+
+### 元素内容
+
+#### 作为HTML的内容
+
+读取`Element`的`innerHTML`属性会返回该元素内容的标记字符串。元素上设置该属性会调用浏览器的解析器，并以新字符串解析后的表示替换元素当前的内容。
+
+```js
+document.body.innerHTML = "<h1>Oops</h1>";
+```
+
+通过`+=`操作符该`innerHTML`追加文本的效率不高。因为该操作会涉及序列化操作，也会涉及解析操作：将元素内容转为字符串，再将新字符串转回元素内容。
+
+`Element`的`outerHTML`属性与`innerHTML`属性类似，只是返回的值包含元素自身。
+
+`insertAdjacentHTML()`：用于插入与指定元素"相邻"(adjacent)的任意HTML标记字符串。插入标签为第二个参数，"相邻"的精确含义为第一个参数的值：
+
+- `"before-begin"`
+- `"afterbegin"`
+- `"beforeend"`
+- `afterend`
+
+```html
+(beforebegin)<div id="target">
+    (afterbegin)This is the element content(beforeend)
+</div>(afterend)
+```
+
+#### 作为纯文本的内容
+
+获得元素的纯文本内容，或向文档中插入纯文本(不转义HTML中使用的尖括号和`&`字符)：
+
+```js
+let para = document.querySelector("p");		// 文档中第一个<p>
+let text = para.textContent;				// 取得该段落的文本
+para.textContent = "Hello World!";			// 修改该段落的文本
+```
+
+`textContent`由`Node`类定义。对于`Element`节点，会找到并返回元素所有后代中的文本。
+
+`Element`类有个`innerText`属性与`textContent`类似。但`innerText`有些少见和复杂的行为，如试图阻止表格格式化。但该属性的定义不严谨，浏览器间的实现也存在兼容性问题，因此不该再使用。
+
+`<script>`元素中的文本，行内`<script>`元素有个`text`属性，可以用于获取它的文本。浏览器永远不会显示`<script>`元素的内容，HTML解析器会忽略脚本中的尖括号和`&`字符。只要把该元素的`type`属性改为某个值(如`text/x-custom-data`)，明确其不是可执行的JS代码即可。这样，JS解释器就会忽略该脚本，但该元素还会出现在文档树里，其`text`属性可以返回在其中保存的数据。
+
+### 创建、插入和删除节点
+
+`Document`的`createElement()`可以创建新元素，并通过`append()`和`prepend()`添加文本或其他元素：
+
+```js
+let paragraph = document.createElement("p");		// 创建空p元素
+let emphasis = document.createElement("em");		// 创建空em元素
+emphasis.append("World");							// 向em元素添加文本
+paragraph.append("Hello", emphasis, "!");			// 向p添加文本和em
+paragraph.prepend("i");								// 在p开头添加文本
+paragraph.innerHTML							// "iHello <em>World!</em>"
+```
+
+`append()`和`prepend()`接收任意多个参数，参数可以是`Node`对象或字符串。字符串自动转为`Text`节点(也可以用`document.createTextNode()`创建`Text`节点)。
+
+在元素的子列表间插入`Element`或`Text`：
+
+```js
+// 找到class="greetings"的标题元素
+let greetings = document.querySelector("h2.greetings");
+
+// 在这个标题后插入新创建的paragraph和一条水平线
+greetings.after(paragraph, document.createElement("hr"));
+```
+
+`after()`和`before()`类似`append()`和`prepend()`，参数相同。但它们同时存在于`Element`和`Text`节点上，可以使用它们相对于`Text`节点插入内容。
+
+元素只能被插入到文档中的一个地方。若某个元素已经在文档中，再将其插到其他地方，那它就会移动到新位置。
+
+如果想创建元素副本，可以用`cloneNode()`方法，传入`true`以复制其全部内容：
+
+```js
+// 创建paragraph的一个副本 再把它插入到greetings元素后面
+greetings.after(paragraph.cloneNode(true));
+```
+
+`remove()`：将`Element`或`Text`从文档中删除，不接收参数。
+
+`replaceWith()`：替换，参数与`before()`和`after()`一样。
+
+```js
+// 从文档中删除greetings元素 并代之以paragraph元素
+// 若paragraph已在文档中 则将其从当前位置移走
+greetings.replaceWith(paragraph);
+
+// 删除paragraph元素
+paragraph.remove();
+```
+
+## [下一节](./2.md)
+
